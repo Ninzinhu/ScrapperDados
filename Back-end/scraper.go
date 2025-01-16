@@ -2,7 +2,10 @@ package main
 
 import (
     "encoding/json"
+    "fmt"
     "net/http"
+    
+
     "github.com/gocolly/colly/v2"
 )
 
@@ -17,13 +20,23 @@ var products []Product
 func scrapeProducts() {
     c := colly.NewCollector()
 
+    // Define o que fazer quando um elemento HTML correspondente é encontrado
     c.OnHTML("div.product-tile__content-wrapper", func(e *colly.HTMLElement) {
-        product := Product{
-            Name:  e.ChildText("a.product-tile__name__link"),
-            Price: e.ChildText("em.value__price"),
-            URL:   e.ChildAttr("a.product-tile__name__link", "href"),
+        name := e.ChildText("a.product-tile__name__link")
+        price := e.ChildText("em.value__price")
+        url := e.ChildAttr("a.product-tile__name__link", "href")
+
+        // Verifica se os dados foram extraídos corretamente
+        if name != "" && price != "" && url != "" {
+            product := Product{
+                Name:  name,
+                Price: price,
+                URL:   url,
+            }
+            products = append(products, product)
+        } else {
+            fmt.Println("Produto não encontrado ou incompleto.")
         }
-        products = append(products, product)
     })
 
     // Visita a página de produtos
@@ -41,5 +54,6 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
     scrapeProducts()
     http.HandleFunc("/api/products", productsHandler)
+    fmt.Println("Servidor rodando na porta 8080...")
     http.ListenAndServe(":8080", nil)
 }
